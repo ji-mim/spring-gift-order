@@ -1,25 +1,36 @@
 package gift.service;
 
-import java.util.Map;
+import gift.config.KakaoAuthException;
+import gift.dto.KakaoTokenResponse;
+import java.net.URI;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
+import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.client.HttpServerErrorException;
 import org.springframework.web.client.RestClient;
+import org.springframework.web.client.RestClientException;
+import org.springframework.web.util.UriComponentsBuilder;
 
 @Service
 public class KakaoService {
 
-    @Value("${kakao.api.key}")
-    private String apiKey;
+    private final String apiKey;
+    private final String redirectUrl;
+    private final RestClient client;
 
-    @Value("${redirect.url}")
-    private String redirectUrl;
+    public KakaoService(
+            @Value("${kakao.api.key}") String apiKey,
+            @Value("${redirect.url}") String redirectUrl, RestClient kakaoRestClient) {
+        this.apiKey = apiKey;
+        this.redirectUrl = redirectUrl;
+        this.client = kakaoRestClient;
+    }
 
-
-    private RestClient client = RestClient.create();
 
     public String getAccessToken(String code) {
         MultiValueMap<String, String> body = new LinkedMultiValueMap<>();
@@ -28,14 +39,28 @@ public class KakaoService {
         body.add("redirect_uri", redirectUrl);
         body.add("code", code);
 
-        Map<String, Object> response = client.post()
-                .uri("https://kauth.kakao.com/oauth/token")
-                .contentType(MediaType.APPLICATION_FORM_URLENCODED)
-                .body(body)
-                .retrieve()
-                .body(new ParameterizedTypeReference<>() {
-                });
+        try {
+            KakaoTokenResponse response = client.post()
+                    .uri("/oauth/token")
+                    .contentType(MediaType.APPLICATION_FORM_URLENCODED)
+                    .body(body)
+                    .retrieve()
+                    .body(new ParameterizedTypeReference<KakaoTokenResponse>() {
+                    });
+            return response.accessToken();
+        } catch (HttpClientErrorException | HttpServerErrorException e) {
+            throw new KakaoAuthException("카카오 인증 실패", e, e.getStatusCode());
+        } catch (RestClientException e) {
+            throw new KakaoAuthException("카카오 API 호출 오류", e, HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
 
-        return response.get("access_token").toString();
+    public URI getOauthUri() {
+        return UriComponentsBuilder.fromUriString("https://kauth.kakao.com")
+                .path("/oauth/authorize")
+                .queryParam("response_type", "code")
+                .queryParam("client_id", apiKey)
+                .queryParam("redirect_uri", redirectUrl)
+                .build().toUri();
     }
 }
