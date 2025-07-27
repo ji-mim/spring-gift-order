@@ -26,7 +26,7 @@ public class WebConfig implements WebMvcConfigurer {
                 .order(1)
                 .addPathPatterns(
                         "/api/wishes/**",
-                        "/css/**", "/*.ico", "/error"
+                        "/api/orders"
                 );
     }
 
@@ -38,9 +38,7 @@ public class WebConfig implements WebMvcConfigurer {
 
     @Bean
     public RestClient kakaoRestClient() {
-        return RestClient.builder()
-                .baseUrl("https://kauth.kakao.com")
-                .build();
+        return RestClient.create();
     }
 
 }
