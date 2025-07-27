@@ -13,16 +13,25 @@ public class Member {
     @Column(unique = true, nullable = false)
     private String email;
 
-    @Column(nullable = false)
     private String password;
 
     private String salt;
+
+    @Enumerated(value = EnumType.STRING)
+    private AccountType accountType;
 
     public Member(Long id, String email, String password, String salt) {
         this.id = id;
         this.email = email;
         this.password = password;
         this.salt = salt;
+    }
+    public Member(Long id, String email, String password, String salt, AccountType accountType) {
+        this.id = id;
+        this.email = email;
+        this.password = password;
+        this.salt = salt;
+        this.accountType = accountType;
     }
 
     public Member() {

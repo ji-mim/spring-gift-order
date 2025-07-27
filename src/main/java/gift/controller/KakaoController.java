@@ -1,5 +1,6 @@
 package gift.controller;
 
+import gift.dto.LoginMemberResponse;
 import gift.service.KakaoService;
 import java.net.URI;
 import org.springframework.http.HttpStatus;
@@ -26,8 +27,8 @@ public class KakaoController {
     }
 
     @GetMapping
-    public ResponseEntity<Void> getAccessToken(@RequestParam("code") String code) {
-        service.getAccessToken(code);
-        return ResponseEntity.status(HttpStatus.OK).build();
+    public ResponseEntity<LoginMemberResponse> getAccessToken(@RequestParam("code") String code) {
+        String token = service.getAccessToken(code);
+        return new ResponseEntity<>(new LoginMemberResponse(token), HttpStatus.OK);
     }
 }

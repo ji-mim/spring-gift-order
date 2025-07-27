@@ -1,8 +1,15 @@
 package gift.service;
 
+import gift.config.JwtTokenProvider;
 import gift.config.KakaoAuthException;
+import gift.domain.AccountType;
+import gift.domain.KakaoToken;
+import gift.domain.Member;
 import gift.dto.KakaoTokenResponse;
+import gift.repository.KakaoTokenJpaRepository;
+import gift.repository.MemberJpaRepository;
 import java.net.URI;
+import java.time.LocalDateTime;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpStatus;
@@ -22,13 +29,22 @@ public class KakaoService {
     private final String apiKey;
     private final String redirectUrl;
     private final RestClient client;
+    private final MemberJpaRepository memberRepository;
+    private final JwtTokenProvider jwtTokenProvider;
+    private final KakaoTokenJpaRepository kakaoTokenRepository;
 
     public KakaoService(
             @Value("${kakao.api.key}") String apiKey,
-            @Value("${redirect.url}") String redirectUrl, RestClient kakaoRestClient) {
+            @Value("${redirect.url}") String redirectUrl,
+            RestClient kakaoRestClient, MemberJpaRepository memberRepository,
+            JwtTokenProvider jwtTokenProvider, KakaoTokenJpaRepository kakaoTokenRepository
+    ) {
         this.apiKey = apiKey;
         this.redirectUrl = redirectUrl;
         this.client = kakaoRestClient;
+        this.memberRepository = memberRepository;
+        this.jwtTokenProvider = jwtTokenProvider;
+        this.kakaoTokenRepository = kakaoTokenRepository;
     }
 
 
@@ -41,13 +57,18 @@ public class KakaoService {
 
         try {
             KakaoTokenResponse response = client.post()
-                    .uri("/oauth/token")
+                    .uri("https://kauth.kakao.com/oauth/token")
                     .contentType(MediaType.APPLICATION_FORM_URLENCODED)
                     .body(body)
                     .retrieve()
                     .body(new ParameterizedTypeReference<KakaoTokenResponse>() {
                     });
-            return response.accessToken();
+            String userNickname = jwtTokenProvider.extractNickname(response.id_token());
+            Member member = new Member(null, userNickname, null, null, AccountType.KAKAO);
+            memberRepository.save(member);
+            kakaoTokenRepository.save(new KakaoToken(null, member, response.access_token(), response.refresh_token(), LocalDateTime.now().plusSeconds(response.expires_in())));
+
+            return jwtTokenProvider.createToken(userNickname);
         } catch (HttpClientErrorException | HttpServerErrorException e) {
             throw new KakaoAuthException("카카오 인증 실패", e, e.getStatusCode());
         } catch (RestClientException e) {
@@ -61,6 +82,7 @@ public class KakaoService {
                 .queryParam("response_type", "code")
                 .queryParam("client_id", apiKey)
                 .queryParam("redirect_uri", redirectUrl)
+                .queryParam("scope", "profile_nickname openid")
                 .build().toUri();
     }
 }
