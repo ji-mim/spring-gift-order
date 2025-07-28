@@ -61,5 +61,10 @@ public class GlobalExceptionHandler {
         ErrorResponse error = new ErrorResponse(e.getMessage(), e.getHttpStatus().value());
         return ResponseEntity.status(e.getHttpStatus()).body(error);
     }
+    @ExceptionHandler(AesException.class)
+    public ResponseEntity<ErrorResponse> aesException(AesException ex) {
+        ErrorResponse response = new ErrorResponse(ex.getMessage(), HttpStatus.BAD_REQUEST.value());
+        return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
+    }
 
 }

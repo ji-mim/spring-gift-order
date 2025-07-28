@@ -14,6 +14,7 @@ import gift.domain.Member;
 import gift.dto.KakaoTokenResponse;
 import gift.repository.KakaoTokenJpaRepository;
 import gift.repository.MemberJpaRepository;
+import gift.util.AesUtil;
 import java.time.LocalDateTime;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -40,13 +41,15 @@ class KakaoServiceTest {
     private JwtTokenProvider jwtTokenProvider;
     @Mock
     private KakaoTokenJpaRepository kakaoTokenRepository;
+    @Mock
+    private AesUtil aesUtil;
 
     @InjectMocks
     private KakaoService kakaoService;
 
     @BeforeEach
     void setUp() {
-        kakaoService = new KakaoService("dummyKey", "dummyUrl", mockRestClient, memberRepository, jwtTokenProvider, kakaoTokenRepository);
+        kakaoService = new KakaoService("dummyKey", "dummyUrl", mockRestClient,aesUtil, memberRepository, jwtTokenProvider, kakaoTokenRepository);
     }
 
 

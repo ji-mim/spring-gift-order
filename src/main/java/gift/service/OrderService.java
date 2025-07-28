@@ -15,6 +15,7 @@ import gift.repository.OptionJpaRepository;
 import gift.repository.OrdersJpaRepository;
 import gift.repository.ProductJpaRepository;
 import gift.repository.WishJpaRepository;
+import gift.util.AesUtil;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.NoSuchElementException;
@@ -36,18 +37,21 @@ public class OrderService {
     private final WishJpaRepository wishRepository;
     private final KakaoTokenJpaRepository kakaoTokenRepository;
     private final OrdersJpaRepository ordersRepository;
+    private final AesUtil aesUtil;
     private final RestClient client;
     private final String apiKey;
 
 
     public OrderService(OptionJpaRepository optionRepository,
             ProductJpaRepository productRepository, WishJpaRepository wishRepository,
-            KakaoTokenJpaRepository kakaoTokenRepository, OrdersJpaRepository ordersRepository, RestClient client, @Value("${kakao.api.key}") String apiKey) {
+            KakaoTokenJpaRepository kakaoTokenRepository, OrdersJpaRepository ordersRepository,
+            AesUtil aesUtil, RestClient client, @Value("${kakao.api.key}") String apiKey) {
         this.optionRepository = optionRepository;
         this.productRepository = productRepository;
         this.wishRepository = wishRepository;
         this.kakaoTokenRepository = kakaoTokenRepository;
         this.ordersRepository = ordersRepository;
+        this.aesUtil = aesUtil;
         this.apiKey = apiKey;
         this.client = client;
     }
@@ -67,7 +71,7 @@ public class OrderService {
                 .orElseThrow(() -> new NoSuchElementException("조회할 수 없는 토큰입니다"));
 
         renewKakaToken(kakaoToken);
-        String accessToken = kakaoToken.getAccessToken();
+        String accessToken = aesUtil.decrypt(kakaoToken.getAccessToken());
         sendMessageToMe(message, accessToken);
 
         Orders savedOrder = ordersRepository.save(new Orders(null, message, quantity, option));
@@ -77,9 +81,7 @@ public class OrderService {
 
     private void sendMessageToMe(String message, String accessToken) {
         ObjectMapper objectMapper = new ObjectMapper();
-
         KakaoTextTemplate template = new KakaoTextTemplate(message, "kakao.com");
-
         String templateJson;
 
         try {
@@ -116,9 +118,9 @@ public class OrderService {
                     .body(new ParameterizedTypeReference<RenewKakaoToken>() {
                     });
 
-            kakaoToken.renewAccessToken(renewKakaoToken.access_token());
-            if (renewKakaoToken.refresh_token() != null) {
-                kakaoToken.renewRefreshToken(renewKakaoToken.refresh_token());
+            if (renewKakaoToken.access_token() != null && renewKakaoToken.refresh_token() != null ) {
+                kakaoToken.renewAccessToken(aesUtil.encrypt(renewKakaoToken.access_token()));
+                kakaoToken.renewRefreshToken(aesUtil.encrypt(renewKakaoToken.refresh_token()));
                 kakaoToken.renewAccessTokenExpiresAt(LocalDateTime.now().plusSeconds(renewKakaoToken.expires_in()));
             }
         }

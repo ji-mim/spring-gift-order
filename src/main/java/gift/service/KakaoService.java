@@ -8,6 +8,7 @@ import gift.domain.Member;
 import gift.dto.KakaoTokenResponse;
 import gift.repository.KakaoTokenJpaRepository;
 import gift.repository.MemberJpaRepository;
+import gift.util.AesUtil;
 import java.net.URI;
 import java.time.LocalDateTime;
 import org.springframework.beans.factory.annotation.Value;
@@ -30,6 +31,7 @@ public class KakaoService {
     private final String apiKey;
     private final String redirectUrl;
     private final RestClient client;
+    private final AesUtil aesUtil;
     private final MemberJpaRepository memberRepository;
     private final JwtTokenProvider jwtTokenProvider;
     private final KakaoTokenJpaRepository kakaoTokenRepository;
@@ -37,12 +39,13 @@ public class KakaoService {
     public KakaoService(
             @Value("${kakao.api.key}") String apiKey,
             @Value("${redirect.url}") String redirectUrl,
-            RestClient kakaoRestClient, MemberJpaRepository memberRepository,
+            RestClient kakaoRestClient, AesUtil aesUtil, MemberJpaRepository memberRepository,
             JwtTokenProvider jwtTokenProvider, KakaoTokenJpaRepository kakaoTokenRepository
     ) {
         this.apiKey = apiKey;
         this.redirectUrl = redirectUrl;
         this.client = kakaoRestClient;
+        this.aesUtil = aesUtil;
         this.memberRepository = memberRepository;
         this.jwtTokenProvider = jwtTokenProvider;
         this.kakaoTokenRepository = kakaoTokenRepository;
@@ -58,7 +61,7 @@ public class KakaoService {
 
             Member member = new Member(null, userEmail, null, null, AccountType.KAKAO);
             memberRepository.save(member);
-            kakaoTokenRepository.save(new KakaoToken(null, member, response.access_token(), response.refresh_token(), LocalDateTime.now().plusSeconds(response.expires_in())));
+            kakaoTokenRepository.save(new KakaoToken(null, member, aesUtil.encrypt(response.access_token()), aesUtil.encrypt(response.refresh_token()), LocalDateTime.now().plusSeconds(response.expires_in())));
 
             return jwtTokenProvider.createToken(userEmail);
         } catch (HttpClientErrorException | HttpServerErrorException e) {
