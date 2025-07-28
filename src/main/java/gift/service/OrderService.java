@@ -23,6 +23,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestClient;
@@ -51,6 +52,7 @@ public class OrderService {
         this.client = client;
     }
 
+    @Transactional
     public OrdersResponse createOrder(Long memberId, Long optionId, int quantity, String message) {
         Option option = optionRepository.findById(optionId)
                 .orElseThrow(() -> new IllegalArgumentException("유효하지 않은 상품입니다."));

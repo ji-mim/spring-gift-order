@@ -49,7 +49,7 @@ public class JwtTokenProvider {
                 .getSubject();
     }
 
-    public String extractNickname(String idToken) {
+    public String extractEmail(String idToken) {
         try {
             String[] parts = idToken.split("\\.");
             String payload = parts[1];
@@ -59,8 +59,9 @@ public class JwtTokenProvider {
 
             ObjectMapper objectMapper = new ObjectMapper();
             JsonNode root = objectMapper.readTree(decodedJson);
+            System.out.println(root);
 
-            return root.has("nickname") ? root.get("nickname").asText() : null;
+            return root.has("email") ? root.get("email").asText() : null;
 
         } catch (Exception e) {
             throw new RuntimeException("JWT nickname 추출 실패", e);

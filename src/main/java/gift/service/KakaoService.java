@@ -15,6 +15,7 @@ import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.HttpClientErrorException;
@@ -48,6 +49,7 @@ public class KakaoService {
     }
 
 
+    @Transactional
     public String getAccessToken(String code) {
         MultiValueMap<String, String> body = new LinkedMultiValueMap<>();
         body.add("grant_type", "authorization_code");
@@ -63,12 +65,16 @@ public class KakaoService {
                     .retrieve()
                     .body(new ParameterizedTypeReference<KakaoTokenResponse>() {
                     });
-            String userNickname = jwtTokenProvider.extractNickname(response.id_token());
-            Member member = new Member(null, userNickname, null, null, AccountType.KAKAO);
+            String userEmail = jwtTokenProvider.extractEmail(response.id_token());
+            if (userEmail == null) {
+                throw new IllegalArgumentException("Email 값을 얻을 수 없습니다.");
+            }
+
+            Member member = new Member(null, userEmail, null, null, AccountType.KAKAO);
             memberRepository.save(member);
             kakaoTokenRepository.save(new KakaoToken(null, member, response.access_token(), response.refresh_token(), LocalDateTime.now().plusSeconds(response.expires_in())));
 
-            return jwtTokenProvider.createToken(userNickname);
+            return jwtTokenProvider.createToken(userEmail);
         } catch (HttpClientErrorException | HttpServerErrorException e) {
             throw new KakaoAuthException("카카오 인증 실패", e, e.getStatusCode());
         } catch (RestClientException e) {
@@ -82,7 +88,7 @@ public class KakaoService {
                 .queryParam("response_type", "code")
                 .queryParam("client_id", apiKey)
                 .queryParam("redirect_uri", redirectUrl)
-                .queryParam("scope", "profile_nickname openid")
+                .queryParam("scope", "account_email openid")
                 .build().toUri();
     }
 }
