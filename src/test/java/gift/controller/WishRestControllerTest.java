@@ -13,26 +13,37 @@ import gift.dto.CreateWishResponse;
 import gift.dto.LoginMemberRequest;
 import gift.dto.LoginMemberResponse;
 import gift.dto.UpdateWishRequest;
+import gift.repository.MemberJpaRepository;
+import gift.repository.WishJpaRepository;
 import java.util.List;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.test.context.jdbc.Sql;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestClient;
 
-@Sql(statements = "delete from wish")
-@Sql(statements = "delete from member")
-@Sql(statements = "delete from product")
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 class WishRestControllerTest {
+
+    @Autowired
+    private MemberJpaRepository memberRepository;
+    @Autowired
+    private WishJpaRepository wishRepository;
 
     @LocalServerPort
     private int port;
     private RestClient client = RestClient.create();
+
+    @BeforeEach
+    void celar() {
+        wishRepository.deleteAll();
+        memberRepository.deleteAll();
+    }
 
     @Test
     @DisplayName("로그인 멤버 상품 조회")
