@@ -30,7 +30,7 @@ public class Option {
 
     private static final Pattern FORBIDDEN = Pattern.compile("[^a-zA-Z0-9가-힣()\\[\\]+\\-&/_]");
 
-    public Option() {
+    protected Option() {
     }
 
     public Option(Long id, String name, int quantity, Product product) {

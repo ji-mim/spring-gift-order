@@ -34,7 +34,7 @@ public class Member {
         this.accountType = accountType;
     }
 
-    public Member() {
+    protected Member() {
     }
 
     public String getSalt() {

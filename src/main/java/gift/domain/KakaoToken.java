@@ -24,7 +24,7 @@ public class KakaoToken {
     private String refreshToken;
     private LocalDateTime accessTokenExpiresAt;
 
-    public KakaoToken() {
+    protected KakaoToken() {
     }
 
     public KakaoToken(Long id, Member member, String accessToken, String refreshToken,

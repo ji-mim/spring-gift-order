@@ -51,24 +51,10 @@ public class KakaoService {
 
     @Transactional
     public String getAccessToken(String code) {
-        MultiValueMap<String, String> body = new LinkedMultiValueMap<>();
-        body.add("grant_type", "authorization_code");
-        body.add("client_id", apiKey);
-        body.add("redirect_uri", redirectUrl);
-        body.add("code", code);
 
         try {
-            KakaoTokenResponse response = client.post()
-                    .uri("https://kauth.kakao.com/oauth/token")
-                    .contentType(MediaType.APPLICATION_FORM_URLENCODED)
-                    .body(body)
-                    .retrieve()
-                    .body(new ParameterizedTypeReference<KakaoTokenResponse>() {
-                    });
-            String userEmail = jwtTokenProvider.extractEmail(response.id_token());
-            if (userEmail == null) {
-                throw new IllegalArgumentException("Email 값을 얻을 수 없습니다.");
-            }
+            KakaoTokenResponse response = requestKakaoToken(code);
+            String userEmail = extractEmailOrThrow(response);
 
             Member member = new Member(null, userEmail, null, null, AccountType.KAKAO);
             memberRepository.save(member);
@@ -80,6 +66,30 @@ public class KakaoService {
         } catch (RestClientException e) {
             throw new KakaoAuthException("카카오 API 호출 오류", e, HttpStatus.INTERNAL_SERVER_ERROR);
         }
+    }
+
+    private KakaoTokenResponse requestKakaoToken(String code) {
+        MultiValueMap<String, String> body = new LinkedMultiValueMap<>();
+        body.add("grant_type", "authorization_code");
+        body.add("client_id", apiKey);
+        body.add("redirect_uri", redirectUrl);
+        body.add("code", code);
+        KakaoTokenResponse response = client.post()
+                .uri("https://kauth.kakao.com/oauth/token")
+                .contentType(MediaType.APPLICATION_FORM_URLENCODED)
+                .body(body)
+                .retrieve()
+                .body(new ParameterizedTypeReference<KakaoTokenResponse>() {
+                });
+        return response;
+    }
+
+    private String extractEmailOrThrow(KakaoTokenResponse response) {
+        String userEmail = jwtTokenProvider.extractEmail(response.id_token());
+        if (userEmail == null) {
+            throw new IllegalArgumentException("Email 값을 얻을 수 없습니다.");
+        }
+        return userEmail;
     }
 
     public URI getOauthUri() {
