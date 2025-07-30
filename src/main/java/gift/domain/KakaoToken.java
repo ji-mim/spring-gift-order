@@ -56,7 +56,8 @@ public class KakaoToken {
         return accessTokenExpiresAt;
     }
 
-    public void renewAccessToken(String accessToken) {
+    public void renewAccessToken(String accessToken, LocalDateTime accessTokenExpiresAt) {
+        renewAccessTokenExpiresAt(accessTokenExpiresAt);
         this.accessToken = accessToken;
     }
 
@@ -66,5 +67,9 @@ public class KakaoToken {
 
     public void renewAccessTokenExpiresAt(LocalDateTime accessTokenExpiresAt) {
         this.accessTokenExpiresAt = accessTokenExpiresAt;
+    }
+
+    public boolean isExpired() {
+        return LocalDateTime.now().isAfter(this.getAccessTokenExpiresAt());
     }
 }

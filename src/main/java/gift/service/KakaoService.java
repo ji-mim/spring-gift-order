@@ -1,11 +1,15 @@
 package gift.service;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import gift.config.JwtTokenProvider;
 import gift.config.KakaoAuthException;
 import gift.domain.AccountType;
 import gift.domain.KakaoToken;
 import gift.domain.Member;
+import gift.dto.KakaoTextTemplate;
 import gift.dto.KakaoTokenResponse;
+import gift.dto.RenewKakaoToken;
 import gift.repository.KakaoTokenJpaRepository;
 import gift.repository.MemberJpaRepository;
 import gift.util.AesUtil;
@@ -39,8 +43,11 @@ public class KakaoService {
     public KakaoService(
             @Value("${kakao.api.key}") String apiKey,
             @Value("${redirect.url}") String redirectUrl,
-            RestClient kakaoRestClient, AesUtil aesUtil, MemberJpaRepository memberRepository,
-            JwtTokenProvider jwtTokenProvider, KakaoTokenJpaRepository kakaoTokenRepository
+            RestClient kakaoRestClient,
+            AesUtil aesUtil,
+            MemberJpaRepository memberRepository,
+            JwtTokenProvider jwtTokenProvider,
+            KakaoTokenJpaRepository kakaoTokenRepository
     ) {
         this.apiKey = apiKey;
         this.redirectUrl = redirectUrl;
@@ -58,6 +65,12 @@ public class KakaoService {
         try {
             KakaoTokenResponse response = requestKakaoToken(code);
             String userEmail = extractEmailOrThrow(response);
+
+            if (memberRepository.findByEmail(userEmail).isPresent()) {
+                Member member = memberRepository.findByEmail(userEmail).get();
+                renewKakaToken(kakaoTokenRepository.findByMemberId(member.getId()).get());
+                return jwtTokenProvider.createToken(userEmail);
+            }
 
             Member member = new Member(null, userEmail, null, null, AccountType.KAKAO);
             memberRepository.save(member);
@@ -93,6 +106,52 @@ public class KakaoService {
             throw new IllegalArgumentException("Email 값을 얻을 수 없습니다.");
         }
         return userEmail;
+    }
+
+    public void renewKakaToken(KakaoToken kakaoToken) {
+        if (kakaoToken.isExpired()) {
+
+            MultiValueMap<String, String> body = new LinkedMultiValueMap<>();
+            body.add("grant_type", "refresh_token");
+            body.add("client_id", apiKey);
+            body.add("redirect_uri", kakaoToken.getRefreshToken());
+
+            RenewKakaoToken renewKakaoToken = client.post()
+                    .uri("https://kauth.kakao.com/oauth/token")
+                    .contentType(MediaType.APPLICATION_FORM_URLENCODED)
+                    .body(body)
+                    .retrieve()
+                    .body(new ParameterizedTypeReference<RenewKakaoToken>() {
+                    });
+
+            if (renewKakaoToken.access_token() != null && renewKakaoToken.refresh_token() != null ) {
+                kakaoToken.renewAccessToken(aesUtil.encrypt(renewKakaoToken.access_token()), LocalDateTime.now().plusSeconds(renewKakaoToken.expires_in()));
+                kakaoToken.renewRefreshToken(aesUtil.encrypt(renewKakaoToken.refresh_token()));
+            }
+        }
+    }
+
+    public void sendMessageToMe(String message, String accessToken) {
+        ObjectMapper objectMapper = new ObjectMapper();
+        KakaoTextTemplate template = new KakaoTextTemplate(message, "kakao.com");
+        String templateJson;
+
+        try {
+            templateJson = objectMapper.writeValueAsString(template);
+        } catch (JsonProcessingException e) {
+            throw new IllegalArgumentException("JSON 직렬화 실패", e);
+        }
+
+        MultiValueMap<String, String> body = new LinkedMultiValueMap<>();
+        body.add("template_object", templateJson);
+
+        client.post()
+                .uri("https://kapi.kakao.com/v2/api/talk/memo/default/send")
+                .header("Authorization", "Bearer " + accessToken)
+                .contentType(MediaType.APPLICATION_FORM_URLENCODED)
+                .body(body)
+                .retrieve()
+                .toBodilessEntity();
     }
 
     public URI getOauthUri() {

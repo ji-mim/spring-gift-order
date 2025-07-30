@@ -23,11 +23,10 @@ public class OrderController {
 
 
     @PostMapping("/api/orders")
-    public HttpEntity<OrdersResponse> createOrders(@RequestBody OrdersRequest request, @Login
-            LoginMember loginMember) {
-        OrdersResponse response = orderService.createOrder(loginMember.id(), request.optionId(),
-                request.quantity(),
-                request.message());
+    public HttpEntity<OrdersResponse> createOrders(
+            @RequestBody OrdersRequest request,
+            @Login LoginMember loginMember) {
+        OrdersResponse response = orderService.createOrder(loginMember.id(), request);
 
         return new ResponseEntity<>(response, HttpStatus.CREATED);
     }
