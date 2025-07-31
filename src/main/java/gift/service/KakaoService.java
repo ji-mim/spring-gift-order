@@ -114,7 +114,7 @@ public class KakaoService {
             MultiValueMap<String, String> body = new LinkedMultiValueMap<>();
             body.add("grant_type", "refresh_token");
             body.add("client_id", apiKey);
-            body.add("redirect_uri", kakaoToken.getRefreshToken());
+            body.add("fresh_token", kakaoToken.getRefreshToken());
 
             RenewKakaoToken renewKakaoToken = client.post()
                     .uri("https://kauth.kakao.com/oauth/token")
