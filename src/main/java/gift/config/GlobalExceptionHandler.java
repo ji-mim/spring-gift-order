@@ -55,4 +55,16 @@ public class GlobalExceptionHandler {
         ErrorResponse response = new ErrorResponse(ex.getMessage(), HttpStatus.UNAUTHORIZED.value());
         return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
     }
+
+    @ExceptionHandler(KakaoAuthException.class)
+    public ResponseEntity<ErrorResponse> handleKakaoAuth(KakaoAuthException e) {
+        ErrorResponse error = new ErrorResponse(e.getMessage(), e.getHttpStatus().value());
+        return ResponseEntity.status(e.getHttpStatus()).body(error);
+    }
+    @ExceptionHandler(AesException.class)
+    public ResponseEntity<ErrorResponse> aesException(AesException ex) {
+        ErrorResponse response = new ErrorResponse(ex.getMessage(), HttpStatus.BAD_REQUEST.value());
+        return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
+    }
+
 }

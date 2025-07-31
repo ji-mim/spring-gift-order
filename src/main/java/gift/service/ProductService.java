@@ -23,12 +23,12 @@ public class ProductService {
     }
 
     public CreateProductResponse save(CreateProductRequest request) {
-        Product product = repository.save(
-                new Product(null, request.name(), request.price(), request.imageUrl()));
+        Product product = new Product(null, request.name(), request.price(), request.imageUrl());
         List<Option> options = request.options().stream()
                 .map(o -> new Option(null, o.name(), o.quantity(), product)).toList();
 
         options.forEach(product::addOption);
+        repository.save(product);
 
         return new CreateProductResponse(product.getId(), product.getName(), product.getPrice(), product.getImageUrl());
     }

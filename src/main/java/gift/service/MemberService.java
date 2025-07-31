@@ -1,6 +1,7 @@
 package gift.service;
 
 import gift.config.NotMatchPasswordException;
+import gift.domain.AccountType;
 import gift.domain.Member;
 import gift.dto.CreateMemberRequest;
 import gift.dto.CreateMemberResponse;
@@ -29,7 +30,7 @@ public class MemberService {
         duplicateEmailCheck(request.email());
         String salt = ShaUtil.getSalt();
         String encryptPassword = ShaUtil.encrypt(request.password(), salt);
-        Member member = memberRepository.save(new Member(null, request.email(), encryptPassword, salt));
+        Member member = memberRepository.save(new Member(null, request.email(), encryptPassword, salt, AccountType.LOCAL));
         return new CreateMemberResponse(member.getId(), member.getEmail());
     }
 
